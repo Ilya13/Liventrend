@@ -1,7 +1,10 @@
 package ru.vertiprakhov.lcl.client.ui;
 
 import com.google.gwt.canvas.client.Canvas;
+import com.google.gwt.canvas.dom.client.Context;
 import com.google.gwt.canvas.dom.client.Context2d;
+import com.google.gwt.canvas.dom.client.Context2d.TextAlign;
+import com.google.gwt.canvas.dom.client.Context2d.TextBaseline;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.dom.client.KeyCodes;
@@ -22,9 +25,9 @@ public class CrazyTextBox extends TextBoxBase {
 	private int canvasWidth = 168;
 	private int canvasHeight = 15;
 	
-	private String value;
-	private int curretPosition;
-	private double currentPosition;
+	private String value = "";
+	private int curretPosition = 0;
+	private double currentPosition = 0;
 	
 	public CrazyTextBox() {
 		this(Document.get().createDivElement(), "gwt-TextBox lcl-CrazyTextBox");
@@ -46,6 +49,8 @@ public class CrazyTextBox extends TextBoxBase {
 		canvas.setHeight(canvasHeight+"px");
 		
 		context = canvas.getContext2d();
+		context.setTextAlign(TextAlign.LEFT);
+		context.setTextBaseline(TextBaseline.TOP);
 		context.save();
 		
 		addKeyDownHandler(new KeyDownHandler() {
@@ -72,8 +77,9 @@ public class CrazyTextBox extends TextBoxBase {
 	}
 
 	private void addChar(char charCode) {
-		// TODO Auto-generated method stub
-		
+		value = value.substring(0, curretPosition) + charCode + value.substring(curretPosition);
+		context.clearRect(currentPosition, 0, canvasWidth, canvasHeight);
+		context.fillText(value, 0, canvasHeight);
 	}
 
 	private void removeChar() {

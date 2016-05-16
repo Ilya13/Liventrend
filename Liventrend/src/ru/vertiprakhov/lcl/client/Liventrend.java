@@ -14,7 +14,6 @@ public class Liventrend implements EntryPoint {
 		final CrazyTextBox nameField = new CrazyTextBox();
 
 		RootPanel.get("nameFieldContainer").add(nameField);
-
 		nameField.setFocus(true);
 	}
 }
