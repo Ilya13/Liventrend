@@ -24,6 +24,11 @@ public class CrazyTextBox extends TextBoxBase {
 
 	private int canvasWidth = 168;
 	private int canvasHeight = 15;
+	private int fontSize = 13;
+	private int paddingLeft;
+	private int paddingRight;
+	private int paddingTop;
+	private int paddingBottom;
 	
 	private String value = "";
 	private int curretPosition = 0;
@@ -38,19 +43,32 @@ public class CrazyTextBox extends TextBoxBase {
 	    if (styleName != null) {
 	    	setStyleName(styleName);
 	    }
-	    init();
 	}
 
+	@Override
+	protected void onLoad(){
+		super.onLoad();
+	    init();
+	}
+	
 	private void init() {
 		canvas = Canvas.createIfSupported();
 		if (canvas == null) return;
 		
-		canvas.setWidth(canvasWidth+"px");
-		canvas.setHeight(canvasHeight+"px");
-		
 		context = canvas.getContext2d();
-		context.setTextAlign(TextAlign.LEFT);
-		context.setTextBaseline(TextBaseline.TOP);
+
+		String fontFamily = getComputedStyleProperty(getElement(), "font-family");
+		String fontSize = getComputedStyleProperty(getElement(), "font-size");
+		setPaddingLeft(getComputedStyleProperty(getElement(), "padding-left"));
+		setPaddingRight(getComputedStyleProperty(getElement(), "padding-right"));
+		setPaddingTop(getComputedStyleProperty(getElement(), "padding-top"));
+		setPaddingBottom(getComputedStyleProperty(getElement(), "padding-bottom"));
+		setFontSize(fontSize);
+		
+		canvas.setCoordinateSpaceWidth(canvasWidth);
+		canvas.setCoordinateSpaceHeight(canvasHeight);
+		
+		context.setFont(fontSize + " " + fontFamily);
 		context.save();
 		
 		addKeyDownHandler(new KeyDownHandler() {
@@ -77,14 +95,85 @@ public class CrazyTextBox extends TextBoxBase {
 	}
 
 	private void addChar(char charCode) {
-		value = value.substring(0, curretPosition) + charCode + value.substring(curretPosition);
+		String redrawStr = charCode + value.substring(curretPosition);
+		value = value.substring(0, curretPosition) + redrawStr;
 		context.clearRect(currentPosition, 0, canvasWidth, canvasHeight);
-		context.fillText(value, 0, canvasHeight);
+		drawString(redrawStr);
+		currentPosition += context.measureText(String.valueOf(charCode)).getWidth();
+		curretPosition++;
 	}
 
+	private void drawString(String str) {
+		double position = currentPosition;
+		for (int i = 0; i < str.length(); i++) {
+			char chr = str.charAt(i);
+			String ch = String.valueOf(chr);
+			double width = context.measureText(ch).getWidth();
+			if ((curretPosition + i & 1) != 0){
+				double y = -paddingTop;
+				if (!Character.isLowerCase(chr)){
+					context.setTextBaseline(TextBaseline.BOTTOM);
+				} else {
+					y -= fontSize/2;
+				}
+				context.scale(1, -1);
+				context.fillText(ch, position, y);
+				context.scale(1, -1);
+				context.setTextBaseline(TextBaseline.ALPHABETIC);
+			} else {
+				context.fillText(ch, position, fontSize + paddingTop);
+			}
+			position += width;
+		}
+	}
+ 
 	private void removeChar() {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	private void setFontSize(String fontSize){
+		this.fontSize = sizeToInt(fontSize);
+		updatHeight();
+	}
+
+	public void setPaddingLeft(String paddingLeft) {
+		this.paddingLeft = sizeToInt(paddingLeft);
+	}
+
+	public void setPaddingRight(String paddingRight) {
+		this.paddingRight = sizeToInt(paddingRight);
+	}
+
+	public void setPaddingTop(String paddingTop) {
+		this.paddingTop = sizeToInt(paddingTop);
+		updatHeight();
+	}
+
+	public void setPaddingBottom(String paddingBottom) {
+		this.paddingBottom = sizeToInt(paddingBottom);
+		updatHeight();
+	}
+	
+	private void updatHeight(){
+		canvasHeight = this.fontSize + this.paddingTop + this.paddingBottom;
+	}
+	
+	private static int sizeToInt(String size){
+		try {
+			return Integer.parseInt(size.replaceAll("[^\\d.]", ""));
+		} catch (Exception e){}
+		return 0;
+	}
+	
+	private static native String getComputedStyleProperty(Element element, String property)  /*-{
+		var value = window.getComputedStyle(element,null).getPropertyValue(property)
+		console.log(property+":"+value);
+		return value;
+	}-*/;
+	
+	private native void consoleLog(String message) /*-{
+	    console.log(message);
+	}-*/;
 
 }
