@@ -1,5 +1,9 @@
 package ru.vertiprakhov.lcl.client.ui;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context;
 import com.google.gwt.canvas.dom.client.Context2d;
@@ -17,8 +21,13 @@ import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.TextBoxBase;
 
+import ru.vertiprakhov.lcl.client.model.TextPoint;
+import ru.vertiprakhov.lcl.client.model.TextRange;
+
 public class CrazyTextBox extends TextBoxBase {
 
+	private static final int MAX_CHAR_LENGHT = 310;
+	
 	private Canvas canvas;
 	private Context2d context;
 
@@ -31,8 +40,9 @@ public class CrazyTextBox extends TextBoxBase {
 	private int paddingBottom;
 	
 	private String value = "";
-	private int curretPosition = 0;
-	private double currentPosition = 0;
+	private TextRange range = new TextRange();
+	
+	private List<TextPoint> points = new ArrayList<>();
 	
 	public CrazyTextBox() {
 		this(Document.get().createDivElement(), "gwt-TextBox lcl-CrazyTextBox");
@@ -87,7 +97,9 @@ public class CrazyTextBox extends TextBoxBase {
 			
 			@Override
 			public void onKeyPress(KeyPressEvent event) {
-				addChar(event.getCharCode());
+				if (value.length() <= MAX_CHAR_LENGHT){
+					addChar(event.getCharCode());	
+				}
 			}
 		});
 		
@@ -95,40 +107,68 @@ public class CrazyTextBox extends TextBoxBase {
 	}
 
 	private void addChar(char charCode) {
-		String redrawStr = charCode + value.substring(curretPosition);
-		value = value.substring(0, curretPosition) + redrawStr;
-		context.clearRect(currentPosition, 0, canvasWidth, canvasHeight);
-		drawString(redrawStr);
-		currentPosition += context.measureText(String.valueOf(charCode)).getWidth();
-		curretPosition++;
+		TextPoint point = new TextPoint(charCode, context.measureText(String.valueOf(charCode)).getWidth());
+		range.width += point.getWidth();
+		int drawLeft = 0;
+		boolean clearAll = false;
+		if(range.width > canvasWidth){
+			if (range.curret == points.size()){
+				do {
+					range.width -= points.get(range.left).getWidth();
+					range.left++;
+				} while (range.width > canvasWidth);
+				drawLeft = range.left;
+				clearAll = true;
+			} else {
+			}
+		} else {
+			drawLeft = range.right;
+		}
+		points.add(range.curret, point);
+		range.right++;
+		range.curret++;
+
+		double position = 0;
+		if (clearAll){
+			context.clearRect(0, 0, canvasWidth, canvasHeight);
+		} else {
+			position = clearRange(drawLeft, range.right);
+		}
+		
+		drawRange(position, drawLeft, range.right);
 	}
 
-	private void drawString(String str) {
-		double position = currentPosition;
-		for (int i = 0; i < str.length(); i++) {
-			char chr = str.charAt(i);
-			String ch = String.valueOf(chr);
-			double width = context.measureText(ch).getWidth();
-			if ((curretPosition + i & 1) != 0){
+	private double clearRange(int left, int right) {
+		double position = 0;
+		for (int i = 0; i < left; i++) {
+			position += points.get(i).getWidth();
+		}
+		context.clearRect(position, 0, canvasWidth, canvasHeight);
+		return position;
+	}
+	
+	private void drawRange(double position, int left, int right) {
+		for (int i = left; i < right; i++) {
+			TextPoint point = points.get(i);
+			if ((i & 1) != 0){
 				double y = -paddingTop;
-				if (!Character.isLowerCase(chr)){
+				if (!Character.isLowerCase(point.getChr())){
 					context.setTextBaseline(TextBaseline.BOTTOM);
 				} else {
 					y -= fontSize/2;
 				}
 				context.scale(1, -1);
-				context.fillText(ch, position, y);
+				context.fillText(String.valueOf(point.getChr()), position, y);
 				context.scale(1, -1);
 				context.setTextBaseline(TextBaseline.ALPHABETIC);
 			} else {
-				context.fillText(ch, position, fontSize + paddingTop);
+				context.fillText(String.valueOf(point.getChr()), position, fontSize + paddingTop);
 			}
-			position += width;
+			position += point.getWidth();
 		}
 	}
  
 	private void removeChar() {
-		// TODO Auto-generated method stub
 		
 	}
 	
